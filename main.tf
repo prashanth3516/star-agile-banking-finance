@@ -2,7 +2,25 @@ resource "aws_instance" "test-server" {
   ami = "ami-06b21ccaeff8cd686"
   instance_type = "t2.micro"
   key_name = "mykey"
-  vpc_security_group_ids = ["sg-07b27cb62e669d045"]
+  vpc_security_group_ids = ["sg-066c39eb7596d1e8f"]
+  resource "aws_security_group" "test_sg" {
+  name   = "test_sg"
+  vpc_id = "vpc-06df801ca6f85228b"  # Use your VPC ID
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
   connection {
      type = "ssh"
      user = "ec2-user"
