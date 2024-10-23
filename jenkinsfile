@@ -46,6 +46,7 @@ pipeline {
                     dir('terraform-files') {
                     sh 'sudo chmod 600 mykey.pem'
                     sh 'terraform init'
+                    sh 'terraform plan'
                     sh 'terraform validate'
                     sh 'terraform apply --auto-approve'
 }
