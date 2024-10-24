@@ -14,42 +14,68 @@ pipeline {
 
                 // Run Maven on a Unix agent.
                 sh "mvn -Dmaven.test.failure.ignore=true clean package"
-
             }        
         }
-       stage('Generate Test Reports') {
-           steps {
-               publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: '/var/lib/jenkins/workspace/BankingProject/target/surefire-reports', reportFiles: 'index.html', reportName: 'HTML Report', reportTitles: '', useWrapperFileDirectly: true])
-                    }
-            }
-       stage('Create Docker Image') {
-           steps {
-               sh 'docker build -t prashanth3516/banking-project-demo:3.0 .'
-                    }
-                }
-       stage('Docker-Login') {
-           steps {
-               withCredentials([usernamePassword(credentialsId: 'Docker-login', passwordVariable: 'dockerpassword', usernameVariable: 'dockerlogin')]) { 
-               sh 'docker login -u ${dockerlogin} -p ${dockerpassword}'
-                                   }
-                        }
-                }
-       stage('Push-Image') {
-           steps {
-               sh 'docker push prashanth3516/banking-project-demo:3.0'
-                     }
-                }
-       stage('Config & Deployment') {
+
+        stage('Generate Test Reports') {
             steps {
-                withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS-ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, 
+                              reportDir: 'target/surefire-reports', reportFiles: 'index.html', 
+                              reportName: 'HTML Report', reportTitles: '', useWrapperFileDirectly: true])
+            }
+        }
+
+        stage('Create Docker Image') {
+            steps {
+                sh 'docker build -t prashanth3516/banking-project-demo:3.0 .'
+            }
+        }
+
+        stage('Docker-Login') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'Docker-login', 
+                                                  passwordVariable: 'dockerpassword', 
+                                                  usernameVariable: 'dockerlogin')]) { 
+                    sh 'echo "${dockerpassword}" | docker login -u "${dockerlogin}" --password-stdin'
+                }
+            }
+        }
+
+        stage('Push-Image') {
+            steps {
+                sh 'docker push prashanth3516/banking-project-demo:3.0'
+            }
+        }
+
+        stage('Config & Deployment') {
+            steps {
+                withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
+                                     credentialsId: 'AWS-ID', 
+                                     secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    // Create terraform-files directory if it doesn't exist
                     dir('terraform-files') {
-                    sh 'sudo chmod 600 mykey123.pem'
-                    sh 'terraform init'
-                    sh 'terraform validate'
-                    sh 'terraform apply --auto-approve'
-}
+                        script {
+                            sh 'mkdir -p terraform-files' // Create the directory if it doesn't exist
+
+                            // Ensure the private key file exists
+                            if (fileExists('mykey123.pem')) {
+                                sh 'sudo chmod 600 mykey123.pem'
+                            } else {
+                                error 'Private key file mykey123.pem not found!'
+                            }
+                            
+                            // Check for Terraform configuration files
+                            if (!fileExists('*.tf')) {
+                                error 'Terraform configuration files (*.tf) not found in terraform-files directory!'
+                            }
+
+                            sh 'terraform init'
+                            sh 'terraform validate'
+                            sh 'terraform apply --auto-approve'
+                        }
+                    }
+                }
+            }
+        }
     }
-}
-}
-}
 }
