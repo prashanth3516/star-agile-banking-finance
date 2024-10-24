@@ -46,7 +46,6 @@ pipeline {
                     sh 'sudo chmod 600 mykey.pem'
                     sh 'terraform init'
                     sh 'terraform validate'
-                    sh 'terraform apply terraform/'
                     sh 'terraform apply --auto-approve'
 }
     }
