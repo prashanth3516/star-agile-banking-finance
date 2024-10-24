@@ -40,16 +40,42 @@ pipeline {
                      }
                 }
        stage('Config & Deployment') {
-            steps {
-                withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS-ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                    dir('terraform-files') {
-                    sh 'sudo chmod 600 mykey123.pem'
-                    sh 'terraform init'
-                    sh 'terraform validate'
-                    sh 'terraform apply --auto-approve'
-}
+    steps {
+        withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
+                             credentialsId: 'AWS-ID', 
+                             secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+
+            // Ensure terraform-files directory exists
+            sh '''
+            if [ -d "terraform-files" ]; then
+                echo "Directory terraform-files exists, proceeding..."
+            else
+                echo "Error: terraform-files directory not found!"
+                exit 1
+            fi
+            '''
+
+            // Move into the terraform-files directory and check for mykey123.pem
+            dir('terraform-files') {
+                sh '''
+                # Check if mykey123.pem exists
+                if [ -f "mykey123.pem" ]; then
+                    sudo chmod 600 mykey123.pem
+                    echo "Key file permissions set successfully."
+                else
+                    echo "Error: mykey123.pem file not found!"
+                    exit 1
+                fi
+
+                # Initialize and run Terraform if everything is in place
+                terraform init
+                terraform validate
+                terraform apply --auto-approve
+                '''
+            }
+        }
     }
 }
-}
+
 }
 }
